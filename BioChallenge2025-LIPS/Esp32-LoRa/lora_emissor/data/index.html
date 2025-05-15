@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESP32 (LoRa + Server)</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" crossorigin="anonymous" />
+
+  <style>
+
+    @import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap');
+
+    :root {
+      --primary-color: #1e88e5;
+      --secondary-color: #e3f2fd;
+      --text-color: #212121;
+      --card-bg: #ffffff;
+      --accent-color: #4caf50;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Raleway", sans-serif;
+      background-color: #f5f7fa;
+      color: var(--text-color);
+    }
+
+
+    header {
+      /* gradiente diagonal com vários tons */
+      background: linear-gradient(45deg,
+        #2196f3,
+        #21cbf3,
+        #1e88e5,
+        #29b6f6
+      );
+      /* faz o gradiente ser 200% maior que o elemento */
+      background-size: 200% 200%;
+      /* aplica animação chamada "moveGradient" */
+      animation: moveGradient 5s ease infinite;
+      color: #080039;
+      padding: 2rem 1rem;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* define a sequência de quadros da animação */
+    @keyframes moveGradient {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+
+    header h2 {
+      margin: 0;
+      font-size: 2.2rem;
+      font-weight: 500;
+    }
+
+    header p {
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      font-weight: 300;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 1.5rem 2rem;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      transition: transform 0.2s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.02);
+    }
+
+    .card i {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .readings {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .units {
+      font-size: 1rem;
+      color: #666;
+    }
+
+    @media (min-width: 600px) {
+      main {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>Old Guys Monitor</h2>
+  </header>
+
+  <main>
+    <div class="card">
+      <i class="fas fa-tint" style="color:#42a5f5;"></i>
+      <div>Umidade</div>
+      <div class="readings" id="umidade"></div>
+      <div class="units">%</div>
+    </div>
+  </main>
+
+  <script type="text/javascript"></script>
+
+</body>
+<script>
+  // Função que busca o valor da umidade e atualiza o elemento na página
+  async function atualizarUmidade() {
+    try {
+      const response = await fetch('/umidade');           // Requisição AJAX :contentReference[oaicite:0]{index=0}
+      if (!response.ok) throw new Error('Erro na requisição');
+      const text = await response.text();
+      document.getElementById('umidade').innerText = text; // Atualiza o DOM :contentReference[oaicite:1]{index=1}
+    } catch (err) {
+      console.error('Falha ao obter umidade:', err);
+    }
+  }
+
+  // Atualiza a cada 5 segundos (pode ajustar o intervalo)
+  setInterval(atualizarUmidade, 5000);
+
+  // Atualiza imediatemente ao carregar a página
+  window.addEventListener('load', atualizarUmidade);
+</script>
+</html>
