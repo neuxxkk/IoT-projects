@@ -189,23 +189,23 @@ void central_check() {
   - Coloca o ESP32 em sono profundo (going_to_sleep)
 */
 void set_sleep_time(){
-
+  
   configTime(gmtOffset, daylightOffset, ntpServer);
   Serial.println("Sincronizando hora NTP...");
-  struct tm tempo;
-  if (!getLocalTime(&tempo, 5000)) {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo, 5000)) {
     Serial.println("Falha ao obter hora! Entrando em deep sleep curto...");
     return;
   }
 
   char buffer[64];
-  strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &tempo);
+  strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &timeinfo);
   Serial.print("Hora atual: ");
   Serial.println(buffer);
 
-  int now_h = tempo.tm_hour;
-  int now_m = tempo.tm_min;
-  int now_s = tempo.tm_sec;
+  int now_h = timeinfo.tm_hour;
+  int now_m = timeinfo.tm_min;
+  int now_s = timeinfo.tm_sec;
   
   // Turn 'on' 8h and 'off' 18h
   if (now_h < 8) {
@@ -293,9 +293,10 @@ void server_init() {
 */
 void wifi_connect() {
   WiFi.mode(WIFI_STA);
-  if (!WiFi.config(local_IP, gateway, subnet)) {
+  /*if (!WiFi.config(local_IP, gateway, subnet)) {
     Serial.println("Falha ao configurar IP estático"); 
   }
+  */
 
   WiFi.begin(ssid, password);
   display_write_wifi();
