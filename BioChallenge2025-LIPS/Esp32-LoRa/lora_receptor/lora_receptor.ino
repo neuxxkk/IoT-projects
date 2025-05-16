@@ -32,6 +32,13 @@
 #define OLED_LINE2      40
 #define OLED_LINE3      50
 
+// Parâmetros de rede
+#define ACESS_POINT 0
+
+IPAddress local_IP(192,168,ACESS_POINT,65);
+IPAddress gateway(192,168,ACESS_POINT,1);
+IPAddress subnet(255,255,255,0);
+
 // Struct para dados do LoRa
 struct LoraData {
   float umidade;
@@ -41,12 +48,8 @@ struct LoraData {
 #define DEBUG_SERIAL_BAUDRATE    115200
 
 // WIFI
-const char* ssid     = "vitornms";
-const char* password = "qwerasdf";
-// Parâmetros de rede para ter IP estático
-IPAddress local_IP(192,168,172,65);    // 172 é o IP do ponto de acesso
-IPAddress gateway(192,168,172,1);
-IPAddress subnet(255,255,255,0);
+const char* ssid     = "Lips";
+const char* password = "sala3086";
 
 // Server declaration
 AsyncWebServer server(80);
@@ -61,7 +64,7 @@ bool lora_chip_init(void);
 void server_init(void);
 
 // Funções de primeiro contato
-bool wifi_connect(void);
+void wifi_connect(void);
 void default_display(void);
 
 // Funções de leitura
@@ -70,6 +73,7 @@ bool lora_interpret(void);
 
 // Funções de escrita e envio
 void display_write(void);
+void display_write_wifi(void);
 
 
 /*
@@ -142,20 +146,63 @@ void server_init(){
     Connect to WIFI
     - Tenta conectar ao wifi
 */
-bool wifi_connect(){
+void wifi_connect() {
   WiFi.mode(WIFI_STA);
   if (!WiFi.config(local_IP, gateway, subnet)) {
     Serial.println("Falha ao configurar IP estático"); 
   }
+
   WiFi.begin(ssid, password);
-  Serial.println("Tentando conectar ao WiFi...");
+  display_write_wifi();
+
+  display.fillRect(0, OLED_LINE2, SCREEN_WIDTH, 10, BLACK);
+  display.setCursor(0, OLED_LINE2);
+  display.print("Conectando");
+  display.display();
+
+  int dotCount = 0;
+
   while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print('.');
+    display.setCursor(60, OLED_LINE2);
+    for (int i = 0; i < 3; i++) {
+      display.print(".");
+      display.display();
+      delay(300);
+    }
+
+    display.fillRect(60, OLED_LINE2, SCREEN_WIDTH - 60, 10, BLACK);
+    display.display();
+
+    for (int i = 0; i < 20; i++) Serial.println();
+    Serial.println("Tentando conectar ao WiFi...");
   }
-  Serial.printf("\nConectado ao wifi %s com IP: ", ssid);
+
+  display.fillRect(0, OLED_LINE2, SCREEN_WIDTH, 10, BLACK);
+  display.setCursor(0, OLED_LINE2);
+  display.print("Conectado");
+  display.display();
+
+  Serial.printf("\nConectado ao WiFi %s com IP: ", ssid);
   Serial.println(WiFi.localIP());  
-  return true;
+
+}
+
+
+/*
+    Informa sobre situação do wifi
+*/
+void display_write_wifi() {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setCursor(0, OLED_LINE1);
+  display.printf("RECEPTOR");
+  display.setTextSize(1);
+  display.setCursor(0, OLED_LINE2);
+  display.printf("Trying wifi");
+  display.setCursor(0, OLED_LINE3);
+  display.print("Rede: ");
+  display.print(ssid);
+  display.display();
 }
 
 /*
@@ -248,6 +295,7 @@ void setup() {
     server_init();
 
     while(lora_chip_init() == false);
+    delay(1500);
 }
 
 void loop() {

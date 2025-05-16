@@ -7,6 +7,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "esp_sleep.h"
+#include <time.h>
 
 // Pinos do LoRa
 #define SCK_LORA        5
@@ -38,7 +40,11 @@
 // Identificadores
 #define DEBUG_SERIAL_BAUDRATE 115200
 #define TIMEOUT_MS 2000 // Tempo de espera Handshake
-#define TIMEOUT_GLOBAL_MS 5000 // Espaçamento entre buscas por central   
+#define TIMEOUT_GLOBAL_MS 5000 // Espaçamento entre buscas por central
+
+#define uS_TO_S_FACTOR 1000000ULL  // Conversion factor for micro seconds to seconds
+#define TIME_TO_SLEEP  5           // Time ESP32 will go to sleep (in seconds)
+
 
 // PRECISA CALIBRAR!
 #define VALOR_SECO  2400
@@ -55,29 +61,39 @@ bool central_exists_aux;
 unsigned long last_central_check;
 
 // WiFi
-const char* ssid     = "vitornms";
-const char* password = "qwerasdf";
+const char* ssid     = "Lips";
+const char* password = "sala3086";
+
 // Parâmetros de rede para ter IP estático
-IPAddress local_IP(192,168,172,65);    // 172 é o IP do ponto de acesso
-IPAddress gateway(192,168,172,1);
+#define ACESS_POINT 0
+IPAddress local_IP(192,168,ACESS_POINT,65);    // 172 é o IP do ponto de acesso
+IPAddress gateway(192,168,ACESS_POINT,1);
 IPAddress subnet(255,255,255,0);   
 
 // Server declaration
 AsyncWebServer server(80);
 
-// Outros
+// Display setting
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+// Get time now
+const char* ntpServer  = "pool.ntp.org";
+const long  gmtOffset  = -3 * 3600;    
+const int   daylightOffset = 0;   
+long sleep_time_sec;
 
 // all-time functions
 bool display_init();
 bool lora_chip_init();
 float sensor_read();
 void central_check();
+void set_sleep_time();
+void going_to_sleep();
 
 // as-central functions
 void server_init();
-bool wifi_connect();
+void wifi_connect();
+void display_write_wifi();
 void display_write_central();
 
 // as-component functions
@@ -167,6 +183,67 @@ void central_check() {
   }
 }
 
+/*
+  Configura o tempo de sono via NTP
+  - Calcula o tempo de sono
+  - Coloca o ESP32 em sono profundo (going_to_sleep)
+*/
+void set_sleep_time(){
+
+  configTime(gmtOffset, daylightOffset, ntpServer);
+  Serial.println("Sincronizando hora NTP...");
+  struct tm tempo;
+  if (!getLocalTime(&tempo, 5000)) {
+    Serial.println("Falha ao obter hora! Entrando em deep sleep curto...");
+    return;
+  }
+
+  char buffer[64];
+  strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &tempo);
+  Serial.print("Hora atual: ");
+  Serial.println(buffer);
+
+  int now_h = tempo.tm_hour;
+  int now_m = tempo.tm_min;
+  int now_s = tempo.tm_sec;
+  
+  // Turn 'on' 8h and 'off' 18h
+  if (now_h < 8) {
+    // antes das 8h dorme até as 8h
+    sleep_time_sec = ((8 - now_h) * 3600L) - ((now_m * 60L) - now_s);
+  }
+  else if (now_h < 18) {
+    // entre 8 e 18h dorme ate as proximas 2h (partindo de 8h)
+    sleep_time_sec = (now_h%2) * (60L - now_m) * 60L + now_s;
+  }
+  else {
+    // depois das 18h dorme até as 8h do dia seguinte
+    sleep_time_sec = ((24 - now_h + 8) * 3600L) - ((now_m * 60L) - now_s);
+  }
+
+  Serial.print("Dormindo por (segundos): ");
+  Serial.println(sleep_time_sec);
+  esp_sleep_enable_timer_wakeup(sleep_time_sec * uS_TO_S_FACTOR);
+  going_to_sleep();
+}
+
+/*
+    Coloca o ESP32 em modo de sono profundo
+    - Desliga o LoRa
+*/
+void going_to_sleep() {
+  Serial.println("[LoRa Sender] Indo para o sono profundo...");
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setCursor(0, OLED_LINE1);
+  display.printf("DORMINDO");
+  display.display();
+  delay(1000);
+
+  display.clearDisplay();
+  Serial.flush();
+  esp_deep_sleep_start();
+}
 
 /*
   AS-CENTRAL FUNCTIONS
@@ -214,22 +291,63 @@ void server_init() {
     Conecta ao WiFi
     - Configura IP estático
 */
-bool wifi_connect(){
+void wifi_connect() {
   WiFi.mode(WIFI_STA);
   if (!WiFi.config(local_IP, gateway, subnet)) {
-    Serial.println("Falha ao configurar IP estático");
+    Serial.println("Falha ao configurar IP estático"); 
   }
+
   WiFi.begin(ssid, password);
-  Serial.println("Tentando conectar ao WiFi...");
+  display_write_wifi();
+
+  display.fillRect(0, OLED_LINE2, SCREEN_WIDTH, 10, BLACK);
+  display.setCursor(0, OLED_LINE2);
+  display.print("Conectando");
+  display.display();
+
+  int dotCount = 0;
+
   while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print('.');
+    display.setCursor(60, OLED_LINE2);
+    for (int i = 0; i < 3; i++) {
+      display.print(".");
+      display.display();
+      delay(300);
+    }
+
+    display.fillRect(60, OLED_LINE2, SCREEN_WIDTH - 60, 10, BLACK);
+    display.display();
+
+    for (int i = 0; i < 20; i++) Serial.println();
+    Serial.println("Tentando conectar ao WiFi...");
   }
-  Serial.print("\nConectado com IP: ");
-  Serial.println(WiFi.localIP());
-  return true;
+
+  display.fillRect(0, OLED_LINE2, SCREEN_WIDTH, 10, BLACK);
+  display.setCursor(0, OLED_LINE2);
+  display.print("Conectado");
+  display.display();
+
+  Serial.printf("\nConectado ao WiFi %s com IP: ", ssid);
+  Serial.println(WiFi.localIP());  
+
 }
 
+/*
+    Atualiza display sendo central
+*/
+void display_write_wifi() {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setCursor(0, OLED_LINE1);
+  display.printf("EMISSOR");
+  display.setTextSize(1);
+  display.setCursor(0, OLED_LINE2);
+  display.printf("Tentando conexao wifi");
+  display.setCursor(0, OLED_LINE3);
+  display.print("Rede: ");
+  display.print(ssid);
+  display.display();
+}
 
 /*
     Atualiza display sendo central
@@ -305,6 +423,8 @@ void setup() {
   central_check();
   if (central_exists) turn_into_component();
   else if (!central_exists) turn_into_central();
+
+  delay(1500);
 }
 
 void loop() {
@@ -321,4 +441,8 @@ void loop() {
   }
 
   delay(1500);
+
+  set_sleep_time();
 }
+
+
