@@ -211,6 +211,7 @@ void display_write_wifi() {
 void default_display() {
     display.clearDisplay();
     display.setCursor(SCREEN_WIDTH, OLED_LINE1);
+    display.setTextSize(2);
     display.print("RECEPTOR");
     display.setTextSize(1);
     display.setCursor(0, OLED_LINE2);
@@ -296,6 +297,7 @@ void setup() {
 
     while(lora_chip_init() == false);
     delay(1500);
+    default_display();
 }
 
 void loop() {

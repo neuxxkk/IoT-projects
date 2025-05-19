@@ -39,11 +39,11 @@
 
 // Identificadores
 #define DEBUG_SERIAL_BAUDRATE 115200
-#define TIMEOUT_MS 2000 // Tempo de espera Handshake
-#define TIMEOUT_GLOBAL_MS 5000 // Espaçamento entre buscas por central
+#define TIMEOUT_HANDSHAKE 2000 // Tempo de espera Handshake
+#define TIMEOUT_CENTRAL_CHECK 5000 // Espaçamento entre buscas por central
 
 #define uS_TO_S_FACTOR 1000000ULL  // Conversion factor for micro seconds to seconds
-#define TIME_TO_SLEEP  5           // Time ESP32 will go to sleep (in seconds)
+// #define TIME_TO_SLEEP  5           // Time ESP32 will go to sleep (in seconds)
 
 
 // PRECISA CALIBRAR!
@@ -162,7 +162,7 @@ void central_check() {
   LoRa.beginPacket(); LoRa.print("PING_CENTRAL"); LoRa.endPacket();
   Serial.printf("\n\n[LoRa] Checking for central...\n");
   unsigned long start = millis();
-  while (millis() - start < TIMEOUT_MS) {
+  while (millis() - start < TIMEOUT_HANDSHAKE) {
     if (LoRa.parsePacket()) {
       String resp = LoRa.readString();
       if (resp == "ACK_CENTRAL") {
@@ -189,7 +189,7 @@ void central_check() {
   - Coloca o ESP32 em sono profundo (going_to_sleep)
 */
 void set_sleep_time(){
-  
+  wifi_connect();
   configTime(gmtOffset, daylightOffset, ntpServer);
   Serial.println("Sincronizando hora NTP...");
   struct tm timeinfo;
@@ -214,7 +214,7 @@ void set_sleep_time(){
   }
   else if (now_h < 18) {
     // entre 8 e 18h dorme ate as proximas 2h (partindo de 8h)
-    sleep_time_sec = (now_h%2) * (60L - now_m) * 60L + now_s;
+    sleep_time_sec = ((60L - now_m) * 60)  + (60L - now_s) + (3600L - ( (now_h%2) * 3600L));
   }
   else {
     // depois das 18h dorme até as 8h do dia seguinte
@@ -430,7 +430,7 @@ void setup() {
 
 void loop() {
 
-  if (millis() - last_central_check > TIMEOUT_GLOBAL_MS) central_check();
+  if (millis() - last_central_check > TIMEOUT_CENTRAL_CHECK) central_check();
 
   data.umidade = sensor_read();
 
