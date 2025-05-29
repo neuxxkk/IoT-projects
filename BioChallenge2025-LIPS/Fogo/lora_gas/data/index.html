@@ -1,63 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ESP32 (LoRa + Server)</title>
+  <title>ESP32 - Monitor LoRa</title>
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" crossorigin="anonymous" />
 
   <style>
-
     @import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&display=swap');
 
     :root {
-      --primary-color: #1e88e5;
-      --secondary-color: #e3f2fd;
-      --text-color: #212121;
-      --card-bg: #ffffff;
-      --accent-color: #4caf50;
+      --primary-color: #1e88e5; /* Azul primário */
+      --secondary-color: #e3f2fd; /* Azul claro secundário */
+      --text-color: #212121; /* Cinza escuro para texto */
+      --card-bg: #ffffff; /* Branco para o fundo dos cards */
+      --accent-color: #4caf50; /* Verde para acentos */
+      --error-color: #f44336; /* Vermelho para erros ou N/A */
     }
 
     body {
       margin: 0;
       font-family: "Raleway", sans-serif;
-      background-color: #f5f7fa;
+      background-color: #f5f7fa; /* Cinza muito claro para o fundo da página */
       color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
-
 
     header {
-      /* gradiente diagonal com vários tons */
       background: linear-gradient(45deg,
-        #2196f3,
-        #21cbf3,
-        #1e88e5,
-        #29b6f6
+        #2196f3, /* Azul Material Design */
+        #21cbf3, /* Azul Ciano Material Design */
+        #1e88e5, /* Azul mais escuro */
+        #29b6f6  /* Azul claro Material Design */
       );
-      /* faz o gradiente ser 200% maior que o elemento */
       background-size: 200% 200%;
-      /* aplica animação chamada "moveGradient" */
-      animation: moveGradient 5s ease infinite;
-      color: #080039;
+      animation: moveGradient 10s ease infinite; /* Animação mais suave */
+      color: #ffffff; /* Texto branco para melhor contraste */
       padding: 2rem 1rem;
       text-align: center;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* Sombra mais pronunciada */
     }
 
-    /* define a sequência de quadros da animação */
     @keyframes moveGradient {
-      0% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-      100% {
-        background-position: 0% 50%;
-      }
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
-
 
     header h2 {
       margin: 0;
@@ -66,55 +57,87 @@
     }
 
     header p {
-      margin: 0.5rem 0;
+      margin: 0.5rem 0 0; /* Ajuste de margem */
       font-size: 1rem;
       font-weight: 300;
     }
 
     main {
       display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1.5rem;
+      flex-direction: row; /* Alterado para linha por defeito */
+      justify-content: center; /* Centraliza os cards */
+      align-items: flex-start; /* Alinha os cards ao topo */
+      gap: 2rem; /* Espaçamento entre cards */
       padding: 2rem 1rem;
+      flex-wrap: wrap; /* Permite que os cards quebrem para a linha de baixo em telas menores */
+      flex-grow: 1;
     }
 
     .card {
       background: var(--card-bg);
       border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1); /* Sombra suave */
       padding: 1.5rem 2rem;
-      width: 90%;
-      max-width: 400px;
+      width: 100%; /* Ocupa a largura total em mobile */
+      max-width: 320px; /* Largura máxima do card */
       text-align: center;
-      transition: transform 0.2s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .card:hover {
-      transform: scale(1.02);
+      transform: translateY(-5px); /* Efeito de elevação suave */
+      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
     }
 
-    .card i {
-      font-size: 2rem;
+    .card .icon { /* Classe específica para o ícone */
+      font-size: 2.5rem; /* Tamanho do ícone */
+      margin-bottom: 1rem;
+    }
+
+    .card .label { /* Classe para o título do card */
+      font-size: 1.1rem;
+      font-weight: 500;
       margin-bottom: 0.5rem;
+      color: #555;
     }
 
-    .readings {
-      font-size: 1.8rem;
+    .card .readings {
+      font-size: 2.5rem; /* Tamanho da leitura */
       font-weight: 700;
       color: var(--primary-color);
+      line-height: 1.2; /* Para evitar que o % fique muito colado */
+    }
+    
+    .card .readings.not-available {
+        font-size: 1.8rem; /* Tamanho menor para N/A */
+        color: var(--error-color);
     }
 
-    .units {
+    .card .units {
       font-size: 1rem;
-      color: #666;
+      color: #777; /* Cor mais suave para unidades */
     }
 
-    @media (min-width: 600px) {
+    footer {
+        text-align: center;
+        padding: 1rem;
+        background-color: #e0e0e0;
+        font-size: 0.9rem;
+        color: #555;
+        margin-top: auto; /* Empurra o rodapé para baixo */
+    }
+
+    /* Media query para telas menores */
+    @media (max-width: 768px) {
       main {
-        flex-direction: row;
-        justify-content: center;
-        flex-wrap: wrap;
+        flex-direction: column; /* Volta para coluna em telas menores */
+        align-items: center;
+      }
+      .card {
+        max-width: 90%; /* Cards ocupam mais da largura */
       }
     }
   </style>
@@ -122,38 +145,94 @@
 <body>
 
   <header>
-    <h2>Old Guys Monitor</h2>
+    <h2>Monitor LoRa ESP32</h2>
+    <p>Dados de Humidade Recebidos</p>
   </header>
 
   <main>
     <div class="card">
-      <i class="fas fa-tint" style="color:#42a5f5;"></i>
-      <div>Umidade</div>
-      <div class="readings" id="umidade"></div>
-      <div class="units">%</div>
+      <i class="fas fa-tint icon" style="color:#42a5f5;"></i>
+      <div class="label">Humidade Sensor 1</div>
+      <div class="readings" id="umidade_s0">--</div>
+      <div class="units" id="units_s0">%</div>
+    </div>
+
+    <div class="card">
+      <i class="fas fa-water icon" style="color:#7e57c2;"></i> <div class="label">Humidade Sensor 2</div>
+      <div class="readings" id="umidade_s1">--</div>
+      <div class="units" id="units_s1">%</div>
     </div>
   </main>
 
-  <script type="text/javascript"></script>
+  <footer>
+    <p>&copy; 2024 - Receptor LoRa ESP32</p>
+  </footer>
 
-</body>
-<script>
-  // Função que busca o valor da umidade e atualiza o elemento na página
-  async function atualizarUmidade() {
-    try {
-      const response = await fetch('/umidade');           // Requisição AJAX :contentReference[oaicite:0]{index=0}
-      if (!response.ok) throw new Error('Erro na requisição');
-      const text = await response.text();
-      document.getElementById('umidade').innerText = text; // Atualiza o DOM :contentReference[oaicite:1]{index=1}
-    } catch (err) {
-      console.error('Falha ao obter umidade:', err);
+  <script type="text/javascript">
+    // Função que busca os valores de humidade e atualiza os elementos na página
+    async function atualizarLeituras() {
+      try {
+        const response = await fetch('/umidade'); // Requisição AJAX
+        if (!response.ok) {
+          throw new Error(`Erro na requisição: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json(); // Espera uma resposta JSON
+
+        // Atualiza Sensor 1 (s0)
+        const umidadeS0Elem = document.getElementById('umidade_s0');
+        const unitsS0Elem = document.getElementById('units_s0');
+        if (data.s0 !== undefined) {
+          if (data.s0 === -1.0 || data.s0 === -1) { // Verifica se é -1.0 ou -1
+            umidadeS0Elem.innerText = "N/A";
+            umidadeS0Elem.classList.add("not-available");
+            unitsS0Elem.style.display = 'none';
+          } else {
+            umidadeS0Elem.innerText = data.s0.toFixed(2); // Formata para 2 casas decimais
+            umidadeS0Elem.classList.remove("not-available");
+            unitsS0Elem.style.display = 'inline';
+          }
+        } else {
+          umidadeS0Elem.innerText = "Erro";
+          umidadeS0Elem.classList.add("not-available");
+          unitsS0Elem.style.display = 'none';
+        }
+
+        // Atualiza Sensor 2 (s1)
+        const umidadeS1Elem = document.getElementById('umidade_s1');
+        const unitsS1Elem = document.getElementById('units_s1');
+        if (data.s1 !== undefined) {
+          if (data.s1 === -1.0 || data.s1 === -1) { // Verifica se é -1.0 ou -1
+            umidadeS1Elem.innerText = "N/A";
+            umidadeS1Elem.classList.add("not-available");
+            unitsS1Elem.style.display = 'none';
+          } else {
+            umidadeS1Elem.innerText = data.s1.toFixed(2);
+            umidadeS1Elem.classList.remove("not-available");
+            unitsS1Elem.style.display = 'inline';
+          }
+        } else {
+          umidadeS1Elem.innerText = "Erro";
+          umidadeS1Elem.classList.add("not-available");
+          unitsS1Elem.style.display = 'none';
+        }
+
+      } catch (err) {
+        console.error('Falha ao obter leituras:', err);
+        // Poderia mostrar uma mensagem de erro genérica nos cards
+        document.getElementById('umidade_s0').innerText = "Falha";
+        document.getElementById('umidade_s0').classList.add("not-available");
+        document.getElementById('units_s0').style.display = 'none';
+        document.getElementById('umidade_s1').innerText = "Falha";
+        document.getElementById('umidade_s1').classList.add("not-available");
+        document.getElementById('units_s1').style.display = 'none';
+      }
     }
-  }
 
-  // Atualiza a cada 5 segundos (pode ajustar o intervalo)
-  setInterval(atualizarUmidade, 5000);
+    // Atualiza a cada 5 segundos
+    setInterval(atualizarLeituras, 5000);
 
-  // Atualiza imediatemente ao carregar a página
-  window.addEventListener('load', atualizarUmidade);
-</script>
+    // Atualiza imediatamente ao carregar a página
+    window.addEventListener('load', atualizarLeituras);
+  </script>
+</body>
 </html>
