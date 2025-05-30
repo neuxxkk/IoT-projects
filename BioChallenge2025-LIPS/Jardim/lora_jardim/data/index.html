@@ -182,7 +182,7 @@
         const umidadeS0Elem = document.getElementById('umidade_s0');
         const unitsS0Elem = document.getElementById('units_s0');
         if (data.s0 !== undefined) {
-          if (data.s0 === -1.0 || data.s0 === -1) { // Verifica se é -1.0 ou -1
+          if (data.s0 === -1.0 || data.s0 === -1 || data.s0 === -2 || data.s0 === -2.0) { // Verifica se é -1.0 ou -1
             umidadeS0Elem.innerText = "N/A";
             umidadeS0Elem.classList.add("not-available");
             unitsS0Elem.style.display = 'none';
@@ -201,7 +201,7 @@
         const umidadeS1Elem = document.getElementById('umidade_s1');
         const unitsS1Elem = document.getElementById('units_s1');
         if (data.s1 !== undefined) {
-          if (data.s1 === -1.0 || data.s1 === -1) { // Verifica se é -1.0 ou -1
+          if (data.s1 === -1.0 || data.s1 === -1 || data.s1 === -2 || data.s1 === -2.0) { // Verifica se é -1.0 ou -1
             umidadeS1Elem.innerText = "N/A";
             umidadeS1Elem.classList.add("not-available");
             unitsS1Elem.style.display = 'none';

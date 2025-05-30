@@ -229,7 +229,7 @@ void display_wifi_connecting_status() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setCursor(0, OLED_LINE_TITLE);
-  display.print(F("RECEPTOR"));
+  display.print(F("CENTRAL"));
   display.setTextSize(1);
   display.setCursor(0, OLED_LINE_UMID1); 
   display.print(F("WiFi: "));
@@ -241,7 +241,7 @@ void default_display_message(const char* msg) {
     display.clearDisplay();
     display.setTextSize(2); 
     display.setCursor(0, OLED_LINE_TITLE); 
-    display.print(F("RECEPTOR"));
+    display.print(F("CENTRAL"));
     display.setTextSize(1); 
     display.setCursor(0, OLED_LINE_UMID1 + 10); 
     display.print(msg);
@@ -314,7 +314,7 @@ void update_oled_display() {
     // Título
     display.setCursor(0, OLED_LINE_TITLE);
     display.setTextSize(2); // Título maior
-    display.print(F("RECEPTOR"));
+    display.print(F("CENTRAL"));
     display.setTextSize(1); // Volta para tamanho 1
 
     // Dados de Umidade
@@ -394,6 +394,7 @@ void setup() {
 
 void loop() {
     int packetSize = LoRa.parsePacket(); 
+
     if (packetSize > 0) { 
         Serial.printf("[LoRa] Pacote recebido. Tamanho: %d, RSSI: %d\n", packetSize, LoRa.packetRssi());
         lora_interpret_packet(packetSize); // Interpreta e atualiza flags new_..._data_received

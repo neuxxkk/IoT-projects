@@ -40,6 +40,7 @@ const int sensor_pins[] = {36, 37};
 
 // Identificadores
 #define DEBUG_SERIAL_BAUDRATE 115200
+
 #define TIMEOUT_HANDSHAKE 2000 // Tempo de espera Handshake
 #define TIMEOUT_CENTRAL_CHECK 5000 // Espaçamento entre buscas por central
 
@@ -47,10 +48,9 @@ const int sensor_pins[] = {36, 37};
 
 // PRECISA CALIBRAR!
 #define VALOR_SECO  2400 // Valor ADC para solo seco
-#define VALOR_UMIDO 1700 // Valor ADC para solo úmido
-
+#define VALOR_UMIDO 1000 // Valor ADC para solo úmido
 // Threshold para acionamento do motor (em porcentagem de umidade)
-#define UMIDADE_MINIMA_PARA_MOTOR 30 // Abaixo deste valor, aciona o motor (ex: irrigar)
+#define UMIDADE_MINIMA_PARA_MOTOR VALOR_SECO // Abaixo deste valor, aciona o motor (ex: irrigar)
 
 // Definição dos pinos de controle do motor
 const int a1 = 38; // Motor 1 FWD
@@ -92,9 +92,11 @@ const int   daylightOffset = 0;
 long sleep_time_sec;
 const long DEFAULT_SHORT_SLEEP_SECONDS = 300L; // 5 minutos para fallback do NTP
 
+int bootCount = 0; // Contador de reinicializações
+
 // all-time functions
 bool display_init();
-bool lora_chip_init();
+bool lora_chip_init();''
 void sensor_read();
 void central_check();
 void set_sleep_time();
@@ -171,15 +173,16 @@ void sensor_read() {
   for (int i = 0; i < NUM_SENSORS; i++) {
     float raw = analogRead(sensor_pins[i]);
     // Checa se pino esta desconectado (PULL_UP/DOWN)
-    if (raw <= 0 || raw >= 4095) { 
+    if (raw <= VALOR_UMIDO) { 
       data.umidade[i] = -1.0; // Indica sensor não conectado ou com falha
-      Serial.printf("[Sensor %d] Leitura invalida ou desconectado. Raw: %.0f\n", i, raw);
+      Serial.printf("[Sensor %d] Leitura invalida ou desconectado. Raw: %.0f\n\n", i, raw);
     } else {
       float perc = map(raw, VALOR_SECO, VALOR_UMIDO, 0, 100);
       data.umidade[i] = constrain(perc, 0, 100);
-      Serial.printf("[Sensor %d] Raw: %.0f, Umidade: %.2f%%\n", i, raw, data.umidade[i]);
+      Serial.printf("[Sensor %d] Raw: %.0f, Umidade: %.2f%%\n\n", i, raw, data.umidade[i]);
     }
   }
+
 
   // Lógica de acionamento do Motor 1 (baseado no sensor 0)
   if (NUM_SENSORS > 0) {
@@ -213,6 +216,7 @@ void sensor_read() {
 void central_check() {
   last_central_check = millis();
   central_exists = false;
+
   LoRa.beginPacket(); LoRa.print("PING_CENTRAL"); LoRa.endPacket();
   Serial.printf("\n\n[LoRa] Checking for central...\n");
   unsigned long start = millis();
@@ -231,10 +235,11 @@ void central_check() {
     Serial.printf("[LoRa] Central found!\n\n");
   }
   else{
-    if (central_exists_aux)  turn_into_central();
+    if (central_exists_aux || bootCount == 1)  turn_into_central();
     central_exists_aux = false;
     Serial.printf("[LoRa] No central found.\n\n");
   }
+
 }
 
 /*
@@ -244,11 +249,14 @@ void central_check() {
   - Em caso de falha NTP, dorme por um tempo curto padrão.
 */
 void set_sleep_time(){
-  wifi_connect(); // Tenta conectar ao WiFi para NTP
   
   struct tm timeinfo;
-  if (!WiFi.isConnected() || !getLocalTime(&timeinfo, 10000)) { // Aumentado timeout NTP para 10s
-    Serial.println("Falha ao obter hora NTP ou WiFi desconectado! Entrando em deep sleep curto...");
+
+  wifi_connect(); // Tenta conectar ao WiFi para NTP
+  configTime(gmtOffset, daylightOffset, ntpServer); // Configura a hora de acordo com paramentros
+
+  if (!getLocalTime(&timeinfo, 5000)) { // Aumentado timeout NTP para 5s
+    Serial.println("Falha ao obter hora NTP! Entrando em deep sleep curto...");
     esp_sleep_enable_timer_wakeup(DEFAULT_SHORT_SLEEP_SECONDS * uS_TO_S_FACTOR);
     going_to_sleep();
     return; // Não continua se NTP falhar
@@ -356,6 +364,7 @@ String construct_humidity_json() {
     - Inicia o servidor
 */
 void turn_into_central(){
+  Serial.printf("\n[LoRa] Turning into Central\n");
   wifi_connect();
   server_init();
 }
@@ -448,7 +457,7 @@ void display_write_wifi() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setCursor(0, OLED_LINE1);
-  display.printf("EMISSOR"); // Ou "CENTRAL"
+  display.printf("CENTRAL");
   display.setTextSize(1);
   display.setCursor(0, OLED_LINE2);
   display.printf("WiFi Conexao");
@@ -465,14 +474,18 @@ void display_write_central() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setCursor(0, OLED_LINE1);
-  display.printf("EMISSOR"); // Ou "CENTRAL"
+  display.printf("CENTRAL JD");
   display.setTextSize(1);
-  display.setCursor(0, OLED_LINE2);
-  if (data.umidade[0] == -1.0) {
-    display.printf("S1: N/A");
-  } else {
-    display.printf("S1: %.2f%%", data.umidade[0]); // Mostra apenas o primeiro sensor por simplicidade no display
+  display.setCursor(0, OLED_LINE2-10);
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    display.setCursor(0, OLED_LINE2 + ((i-1) * 10));
+    if (data.umidade[i] != -1.0) {
+      display.printf("S%d: %.2f%%", i, data.umidade[i]);
+    }else {
+      display.printf("S%d: N/A", i);
+    }
   }
+
   // Para mostrar mais sensores, precisaria de mais linhas ou paginação no display
   // Ex: if (NUM_SENSORS > 1) { display.setCursor(60, OLED_LINE2); display.printf("S2: %.2f%%", data.umidade[1]); }
   display.setCursor(0, OLED_LINE3);
@@ -480,8 +493,6 @@ void display_write_central() {
   display.print(WiFi.localIP());
   display.display();
 }
-
-
 /*
   AS-COMPONENT FUNCTIONS
 */
@@ -507,13 +518,16 @@ void display_write_component() {
   display.clearDisplay();
   display.setTextSize(2);
   display.setCursor(0, OLED_LINE1);
-  display.printf("COMPONENTE");
+  display.printf("JARDIM");
   display.setTextSize(1);
   display.setCursor(0, OLED_LINE2);
-  if (data.umidade[0] == -1.0) {
-    display.printf("S1: N/A");
-  } else {
-    display.printf("S1: %.2f%%", data.umidade[0]); // Mostra apenas o primeiro sensor
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    display.setCursor(0, OLED_LINE2 + ((i-1) * 10));
+    if (data.umidade[i] != -1.0) {
+      display.printf("S%d: %.2f%%", i + 1, data.umidade[i]);
+    }else {
+      display.printf("S%d: N/A", i + 1);
+    }
   }
   display.display();
 }
@@ -535,6 +549,9 @@ void lora_send() {
 
 */
 void setup() {
+  // Inicializa contagem de boot
+  bootCount++;
+
   Serial.begin(DEBUG_SERIAL_BAUDRATE);
   Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
 
@@ -575,17 +592,6 @@ void loop() {
     lora_send();
   } else { // Se é a central (central não existe, então EU sou a central)
     display_write_central();
-    // Como central, também escuta por pacotes LoRa (ex: PINGs de outros componentes)
-    if (LoRa.parsePacket()) {
-        String received_msg = LoRa.readString(); // Lê a mensagem como string
-        if (received_msg == "PING_CENTRAL") { 
-            LoRa.beginPacket();
-            LoRa.print("ACK_CENTRAL");
-            LoRa.endPacket();
-            Serial.println("Responded to PING_CENTRAL as Central.");
-        }
-        // Adicionar aqui lógica para processar dados recebidos de componentes, se necessário
-    }
   }
 
   delay(1500);
@@ -604,8 +610,6 @@ void descer1(){ // Ex: Parar irrigação Motor 1
   // Lógica para "descer" ou "parar" motor 1. Pode ser apenas desligar.
   digitalWrite(a1, LOW); 
   digitalWrite(b2, LOW); 
-  // delay(2000); // Delay removido para ação ser mais responsiva ou controlada externamente
-  // reset_motors(); // Já chamado no início
 }
 
 void subir1(){ // Ex: Iniciar irrigação Motor 1
@@ -623,8 +627,7 @@ void descer2(){ // Ex: Parar irrigação Motor 2
   reset_motors();
   digitalWrite(b1, LOW);
   digitalWrite(a2, LOW);
-  // delay(2000);
-  // reset_motors();
+
 }
 
 void subir2(){ // Ex: Iniciar irrigação Motor 2
