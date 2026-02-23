@@ -27,7 +27,7 @@ Aqui encontra uma coleção de projetos pessoais e profissionais em desenvolvime
 | 🔧 **Hardware** | ESP32 · Arduino · Raspberry Pi · Sensores & Atuadores |
 | 📡 **Comunicação** | LoRa · Wi-Fi · Bluetooth/BLE · MQTT |
 | 💻 **Software** | C/C++ · Python |
-| 🎨 **Design** | Prototipagem de Circuitos · Modelagem 3D |
+| 🎨 **Design** | Prototipagem de Circuitos · Modelagem 3D (Solid Works) |
 
 </div>
 
@@ -41,7 +41,7 @@ Aqui encontra uma coleção de projetos pessoais e profissionais em desenvolvime
 |---------|-----------|-------------|
 | 📁 [`BioChallenge2025-LIPS/Jardim`](./BioChallenge2025-LIPS/Jardim) | Estação de recolha de dados de temperatura e humidade | `ESP32` `C++` `MQTT`|
 | 📁 [`BioChallenge2025-LIPS/Central`](./BioChallenge2025-LIPS/Central) | Comunicação de longo alcance entre nós sensores | `Arduino Nano` `LoRa` `JS` `HTML`|
-| 📁 [`Lixeira Desidratadora`](./Lixeira-Desidratadora) | Lixeira desidratadora de resíduos orgânicos | `Raspberry Pi` `Python` |
+| 📁 [`Lixeira Desidratadora`](./Lixeira-Desidratadora) | Lixeira desidratadora de resíduos orgânicos | `Energia Solar` `Modelagem 3D` `BME`|
 | 📁 [`Robô autônomo`](./Fuscao-Preto) | Robô Autônomo seguidor de linha | `Arduíno UNO` `C++` `PID`|
 
 > 💡 **Nota:** Cada pasta de projeto contém (ou conterá) o seu próprio mini-README com esquemas de ligações elétricas e bibliotecas necessárias.
